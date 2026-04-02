@@ -12,64 +12,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk \
-            build-essential libssl-dev libffi-dev libncurses5 \
-            libstdc++6 zlib1g autoconf libtool pkg-config
-
-      - name: Accept Android SDK licenses
-        run: |
-          mkdir -p $HOME/.android
-          echo "count=0" > $HOME/.android/repositories.cfg
-          ANDROID_SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
-          unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest" || true
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "build-tools;37.0.0" "platforms;android-33" || true
-
-      - name: Install buildozer
-        run: |
-          pip install --upgrade pip
-          pip install Cython==0.29.36 buildozer
-
       - name: Create buildozer.spec
         run: |
           cd TelegramClone
-          cat > buildozer.spec << 'EOF'
-          [app]
-          title = TelegramClone
-          package.name = telegramclone
-          package.domain = org.example
-          source.dir = .
-          source.main = kivy_client.py
-          version = 0.1
-          requirements = python3,kivy==2.3.0,python-socketio,requests
-          android.permissions = INTERNET
-          android.api = 33
-          android.minapi = 21
-          android.ndk = 25b
-          android.archs = arm64-v8a
-          android.accept_sdk_license = True
-          [buildozer]
-          log_level = 2
-          EOF
+          cat > buildozer.spec << 'SPECEOF'
+[app]
+title = TelegramClone
+package.name = telegramclone
+package.domain = org.example
+source.dir = .
+source.main = kivy_client.py
+version = 0.1
+requirements = python3,kivy==2.3.0,python-socketio,requests
+android.permissions = INTERNET
+android.api = 33
+android.minapi = 21
+android.ndk = 25b
+android.archs = arm64-v8a
+android.accept_sdk_license = True
+[buildozer]
+log_level = 2
+SPECEOF
 
-      - name: Build APK
-        run: |
-          cd TelegramClone
-          buildozer android debug
+      - name: Build APK via Docker
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          workdir: TelegramClone
+          buildozer_version: stable
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: TelegramClone-APK
-          path: TelegramClone/bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
