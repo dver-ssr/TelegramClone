@@ -22,7 +22,8 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install Cython==0.29.36 buildozer
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flask flask-socketio eventlet flask-sqlalchemy python-socketio requests
       - name: Init buildozer spec
         run: |
           if [ ! -f buildozer.spec ]; then buildozer init; fi
