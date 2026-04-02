@@ -12,16 +12,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build APK via Docker
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          command: buildozer android debug
-          workdir: TelegramClone
-          buildozer_version: stable
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-11-jdk \
+            build-essential libssl-dev libffi-dev libncurses5 \
+            libstdc++6 zlib1g autoconf libtool pkg-config
+
+      - name: Install buildozer
+        run: |
+          pip install --upgrade pip
+          pip install Cython==0.29.36 buildozer
+
+      - name: Setup Android SDK
+        run: |
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
+          unzip -q /tmp/cmdtools.zip -d "$SDK/cmdline-tools"
+          mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+          mkdir -p "$SDK/tools/bin"
+          ln -sf "$SDK/cmdline-tools/latest/bin/sdkmanager" "$SDK/tools/bin/sdkmanager"
+          ln -sf "$SDK/cmdline-tools/latest/bin/avdmanager" "$SDK/tools/bin/avdmanager"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" "build-tools;33.0.0" "platforms;android-33"
+
+      - name: Build APK
+        run: cd TelegramClone && buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: TelegramClone-APK
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: TelegramClone/bin/*.apk
