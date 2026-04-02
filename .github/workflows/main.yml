@@ -8,6 +8,10 @@ on:
 jobs:
   build_apk:
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: TelegramClone
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,13 +21,15 @@ jobs:
           sudo apt-get install -y python3-pip python3-venv git zip unzip \
             openjdk-17-jdk build-essential libssl-dev libffi-dev \
             libncurses5 libstdc++6 zlib1g autoconf libtool
+        working-directory: .
 
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
           pip install Cython==0.29.36 buildozer
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install flask flask-socketio eventlet flask-sqlalchemy python-socketio requests
+          pip install flask flask-socketio eventlet flask-sqlalchemy python-socketio requests kivy
+        working-directory: .
+
       - name: Init buildozer spec
         run: |
           if [ ! -f buildozer.spec ]; then buildozer init; fi
@@ -44,4 +50,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TelegramClone-APK
-          path: bin/*.apk
+          path: TelegramClone/bin/*.apk
